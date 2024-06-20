@@ -19,6 +19,7 @@
 
 // OLED animation
 #include "lib/layer_status/layer_status.h"
+//#include "lib/bongocat/bongocat.h"
 
 // Each layer gets a name for readability, which is then used in the keymap matrix below.
 // The underscores don't mean anything - you can have a layer called STUFF or any other name.
@@ -33,32 +34,112 @@ enum layer_names {
 };
 
 enum layer_keycodes {
-    COPY_WIN = SAFE_RANGE,
-    PASTE_WIN,
-    CUT_WIN
+    KC_PASTE_WIN,
+    KC_SAVE_WIN,
  };
 
-
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-  switch (keycode) {
-    case COPY_WIN:
-        if (record->event.pressed) {
-           SEND_STRING(SS_LCTL("c")); // copy for windows
-        }
-        return false;
-    case PASTE_WIN:
-        if (record->event.pressed) {
-           SEND_STRING(SS_LCTL("v")); // copy for windows
-        }
-        return false;
-    case CUT_WIN:
-        if (record->event.pressed) {
-           SEND_STRING(SS_LCTL("x")); // copy for windows
-        }
-        return false;
-    default:
-      return true; // Process all other keycodes normally
-  }
+    switch (keycode) {
+        case KC_PASTE_WIN:
+            if (record->event.pressed) {
+                SEND_STRING(SS_LCTL("v")); // paste for windows
+            }
+            return false;
+        case KC_SAVE_WIN:
+            if (record->event.pressed) {
+                SEND_STRING(SS_LCTL("s")); // save for windows
+            }
+            return false;
+        default:
+            return true; // Process all other keycodes normally
+    }
+};
+
+// Tap Dance declarations
+enum {
+    TD_RESET = 0,
+    CT_COPY_WIN,
+    CT_CUT_WIN,
+    CT_DO_ACTIONS,
+    CT_VS_FMT_WIN,
+    TD_CLOSE_TAB_WIN,
+};
+
+void safe_reset(tap_dance_state_t *state, void *user_data) {
+    if (state->count >= 3) {
+        // Reset the keyboard if you tap the key more than three times
+        reset_keyboard();
+        reset_tap_dance(state);
+    }
+}
+
+void ct_do_actions_win(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        SEND_STRING(SS_LCTL("z"));
+        reset_tap_dance(state);
+    } else {
+        SEND_STRING(SS_LCTL("y"));
+        reset_tap_dance(state);
+    }
+}
+
+void ct_copy_win(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        SEND_STRING(SS_LCTL("c"));
+        reset_tap_dance(state);
+    } else {
+        SEND_STRING(SS_LCTL("ac"));
+        reset_tap_dance(state);
+    }
+}
+
+void ct_cut_win(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        SEND_STRING(SS_LCTL("x"));
+        reset_tap_dance(state);
+    } else {
+        SEND_STRING(SS_LCTL("ax"));
+        reset_tap_dance(state);
+    }
+}
+
+void ct_close_tab_win(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        SEND_STRING(SS_LCTL(SS_TAP(X_W)));
+        reset_tap_dance(state);
+    } else if (state->count == 2) {
+        SEND_STRING(SS_LCTL(SS_LSFT(SS_TAP(X_T))));
+        reset_tap_dance(state);
+    } else {
+        SEND_STRING(SS_LALT(SS_TAP(X_F4)));
+        reset_tap_dance(state);
+    }
+}
+
+////////////////////
+// VS Code commands
+////////////////////
+
+// Format for windows
+void ct_vsc_fmt_win(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        SEND_STRING(SS_RSFT(SS_LALT("f"))); // format in VS Code
+        reset_tap_dance(state);
+    } else {
+        SEND_STRING(SS_LCTL("k") SS_LCTL("f")); // format selection in VS Code
+        reset_tap_dance(state);
+    }
+}
+
+
+
+tap_dance_action_t tap_dance_actions[] = {
+  [CT_COPY_WIN] = ACTION_TAP_DANCE_FN(ct_copy_win),
+  [CT_CUT_WIN] = ACTION_TAP_DANCE_FN(ct_cut_win),
+  [CT_DO_ACTIONS] = ACTION_TAP_DANCE_FN(ct_do_actions_win),
+  [CT_VS_FMT_WIN] = ACTION_TAP_DANCE_FN(ct_vsc_fmt_win),
+  [TD_CLOSE_TAB_WIN] = ACTION_TAP_DANCE_FN(ct_close_tab_win),
+  [TD_RESET] = ACTION_TAP_DANCE_FN(safe_reset)
 };
 
 
@@ -87,10 +168,10 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 */
     /*  Row:    0         1        2        3         4      */
     [_BASE] = LAYOUT(
-                COPY_WIN,     PASTE_WIN,    KC_3,    KC_4,     TO(_FN2),
-                CUT_WIN,     KC_6,    KC_7,    KC_8,     TO(_FN),
-                KC_9,     KC_0,    KC_UP,   KC_ENT,   KC_MPLY,
-                MO(_FN2), KC_LEFT, KC_DOWN, KC_RIGHT
+                TD(CT_COPY_WIN),        KC_PASTE_WIN,        TD(CT_CUT_WIN),    TD(CT_VS_FMT_WIN),     TO(_FN2),
+                KC_SAVE_WIN,            TD(CT_DO_ACTIONS),   KC_7,              KC_8,                  TO(_FN),
+                TD(TD_CLOSE_TAB_WIN),   KC_0,                KC_UP,             KC_ENT,                KC_MPLY,
+                MO(_FN2),               KC_LEFT,             KC_DOWN,           KC_RIGHT
             ),
 
 /*
@@ -145,7 +226,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     /*  Row:    0        1        2        3        4        */
     [_FN2] = LAYOUT(
                 RGB_SPI, RGB_SPD, _______, QK_BOOT, TO(_FN1),
-                RGB_SAI, RGB_SAD, _______, _______, TO(_BASE),
+                RGB_SAI, RGB_SAD, _______, TD(TD_RESET), TO(_BASE),
                 RGB_TOG, RGB_MOD, RGB_HUI, _______, _______,
                 _______, RGB_VAI, RGB_HUD, RGB_VAD
             ),
@@ -154,6 +235,7 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 #ifdef OLED_ENABLE
     bool oled_task_user(void) {
         render_layer_status();
+        //render_bongocat();
 
         return true;
     }
