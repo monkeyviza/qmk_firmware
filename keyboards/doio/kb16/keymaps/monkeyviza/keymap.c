@@ -54,12 +54,12 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
             return false;
         case KC_VDESK_L_WIN:
             if (record->event.pressed) {
-                SEND_STRING(SS_LGUI(SS_TAP(KC_LEFT))); // Virtual Desktop left
+                SEND_STRING(SS_LGUI(SS_LCTL(SS_TAP(X_LEFT)))); // Virtual Desktop left
             }
             return false;
         case KC_VDESK_R_WIN:
             if (record->event.pressed) {
-                SEND_STRING(SS_LGUI(SS_TAP(KC_RIGHT))); // Virtual Desktop left
+                SEND_STRING(SS_LGUI(SS_LCTL(SS_TAP(X_RIGHT)))); // Virtual Desktop left
             }
             return false;
         default:
