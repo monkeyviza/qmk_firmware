@@ -36,6 +36,8 @@ enum layer_names {
 enum layer_keycodes {
     KC_PASTE_WIN,
     KC_SAVE_WIN,
+    KC_VDESK_L_WIN,
+    KC_VDESK_R_WIN
  };
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
@@ -48,6 +50,16 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
         case KC_SAVE_WIN:
             if (record->event.pressed) {
                 SEND_STRING(SS_LCTL("s")); // save for windows
+            }
+            return false;
+        case KC_VDESK_L_WIN:
+            if (record->event.pressed) {
+                SEND_STRING(SS_LGUI(SS_TAP(KC_LEFT))); // Virtual Desktop left
+            }
+            return false;
+        case KC_VDESK_R_WIN:
+            if (record->event.pressed) {
+                SEND_STRING(SS_LGUI(SS_TAP(KC_RIGHT))); // Virtual Desktop left
             }
             return false;
         default:
@@ -63,6 +75,7 @@ enum {
     CT_DO_ACTIONS,
     CT_VS_FMT_WIN,
     TD_CLOSE_TAB_WIN,
+    TD_VIRTUAL_DESK_WIN,
 };
 
 void safe_reset(tap_dance_state_t *state, void *user_data) {
@@ -116,6 +129,22 @@ void ct_close_tab_win(tap_dance_state_t *state, void *user_data) {
     }
 }
 
+void ct_virtual_desktops_win(tap_dance_state_t *state, void *user_data) {
+    if (state->count == 1) {
+        // Shows the apps open on the desktop
+        SEND_STRING(SS_LGUI(SS_TAP(X_TAB)));
+        reset_tap_dance(state);
+    } else if (state->count == 2) {
+        // Creates a new virtual desktop
+        SEND_STRING(SS_LGUI(SS_LCTL(SS_TAP(X_D))));
+        reset_tap_dance(state);
+    } else {
+        // Closes current virtual desktop
+        SEND_STRING(SS_LGUI(SS_LCTL(SS_TAP(X_F4))));
+        reset_tap_dance(state);
+    }
+}
+
 ////////////////////
 // VS Code commands
 ////////////////////
@@ -131,14 +160,13 @@ void ct_vsc_fmt_win(tap_dance_state_t *state, void *user_data) {
     }
 }
 
-
-
 tap_dance_action_t tap_dance_actions[] = {
   [CT_COPY_WIN] = ACTION_TAP_DANCE_FN(ct_copy_win),
   [CT_CUT_WIN] = ACTION_TAP_DANCE_FN(ct_cut_win),
   [CT_DO_ACTIONS] = ACTION_TAP_DANCE_FN(ct_do_actions_win),
   [CT_VS_FMT_WIN] = ACTION_TAP_DANCE_FN(ct_vsc_fmt_win),
   [TD_CLOSE_TAB_WIN] = ACTION_TAP_DANCE_FN(ct_close_tab_win),
+  [TD_VIRTUAL_DESK_WIN] = ACTION_TAP_DANCE_FN(ct_virtual_desktops_win),
   [TD_RESET] = ACTION_TAP_DANCE_FN(safe_reset)
 };
 
@@ -168,9 +196,9 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 */
     /*  Row:    0         1        2        3         4      */
     [_BASE] = LAYOUT(
-                TD(CT_COPY_WIN),        KC_PASTE_WIN,        TD(CT_CUT_WIN),    TD(CT_VS_FMT_WIN),     TO(_FN2),
-                KC_SAVE_WIN,            TD(CT_DO_ACTIONS),   KC_7,              KC_8,                  TO(_FN),
-                TD(TD_CLOSE_TAB_WIN),   KC_0,                KC_UP,             KC_ENT,                KC_MPLY,
+                TD(CT_COPY_WIN),        KC_PASTE_WIN,        TD(CT_CUT_WIN),    TD(CT_VS_FMT_WIN),          TO(_FN2),
+                KC_SAVE_WIN,            TD(CT_DO_ACTIONS),   KC_7,              KC_8,                       TO(_FN),
+                TD(TD_CLOSE_TAB_WIN),   KC_VDESK_L_WIN,      KC_VDESK_R_WIN,    TD(TD_VIRTUAL_DESK_WIN),    KC_MPLY,
                 MO(_FN2),               KC_LEFT,             KC_DOWN,           KC_RIGHT
             ),
 
@@ -225,27 +253,27 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
 */
     /*  Row:    0        1        2        3        4        */
     [_FN2] = LAYOUT(
-                RGB_SPI, RGB_SPD, _______, QK_BOOT, TO(_FN1),
-                RGB_SAI, RGB_SAD, _______, TD(TD_RESET), TO(_BASE),
+                RGB_SPI, RGB_SPD, _______, TD(TD_RESET), TO(_FN1),
+                RGB_SAI, RGB_SAD, _______, _______, TO(_BASE),
                 RGB_TOG, RGB_MOD, RGB_HUI, _______, _______,
                 _______, RGB_VAI, RGB_HUD, RGB_VAD
             ),
 };
 
 #ifdef OLED_ENABLE
-    bool oled_task_user(void) {
-        render_layer_status();
-        //render_bongocat();
+bool oled_task_user(void) {
+    render_layer_status();
+    // render_bongocat();
 
-        return true;
-    }
+    return true;
+}
 #endif
 
 #ifdef ENCODER_MAP_ENABLE
-const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
-    [_BASE] = { ENCODER_CCW_CW(KC_WH_L, KC_WH_R), ENCODER_CCW_CW(KC_WH_D, KC_WH_U), ENCODER_CCW_CW(KC_VOLD, KC_VOLU) },
-    [_FN]   = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-    [_FN1]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-    [_FN2]  = { ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS) },
-};
+    const uint16_t PROGMEM encoder_map[][NUM_ENCODERS][NUM_DIRECTIONS] = {
+        [_BASE] = {ENCODER_CCW_CW(KC_WH_L, KC_WH_R), ENCODER_CCW_CW(KC_WH_D, KC_WH_U), ENCODER_CCW_CW(KC_VOLD, KC_VOLU)},
+        [_FN]   = {ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS)},
+        [_FN1]  = {ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS)},
+        [_FN2]  = {ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS), ENCODER_CCW_CW(KC_TRNS, KC_TRNS)},
+    };
 #endif
