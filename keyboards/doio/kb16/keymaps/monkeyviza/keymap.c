@@ -74,14 +74,26 @@ enum {
     CT_CUT_WIN,
     CT_DO_ACTIONS,
     CT_VS_FMT_WIN,
+    CT_VS_CSTM_WIN,
     TD_CLOSE_TAB_WIN,
     TD_VIRTUAL_DESK_WIN,
 };
 
+/**
+ * This function performs a safe reset of the tap dance state and the keyboard.
+ * It takes a tap_dance_state_t pointer and user_data as parameters.
+ * If the state count is greater than or equal to 3, it performs a reset of the keyboard and the tap dance state.
+ *
+ * @param state The tap_dance_state_t pointer.
+ * @param user_data A pointer to user-defined data (if any).
+ */
 void safe_reset(tap_dance_state_t *state, void *user_data) {
+    // Check if the count of the tap dance state is greater than or equal to 3
     if (state->count >= 3) {
-        // Reset the keyboard if you tap the key more than three times
+        // If the count is greater than or equal to 3, perform a reset of the keyboard
         reset_keyboard();
+
+        // Reset the tap dance state
         reset_tap_dance(state);
     }
 }
@@ -131,31 +143,77 @@ void ct_close_tab_win(tap_dance_state_t *state, void *user_data) {
 
 void ct_virtual_desktops_win(tap_dance_state_t *state, void *user_data) {
     if (state->count == 1) {
-        // Shows the apps open on the desktop
         SEND_STRING(SS_LGUI(SS_TAP(X_TAB)));
         reset_tap_dance(state);
     } else if (state->count == 2) {
-        // Creates a new virtual desktop
         SEND_STRING(SS_LGUI(SS_LCTL(SS_TAP(X_D))));
         reset_tap_dance(state);
     } else {
-        // Closes current virtual desktop
         SEND_STRING(SS_LGUI(SS_LCTL(SS_TAP(X_F4))));
         reset_tap_dance(state);
     }
 }
 
+
 ////////////////////
 // VS Code commands
 ////////////////////
 
-// Format for windows
+/**
+ * This function is a Tap Dance action for formatting code in VS Code on Windows.
+ * It takes a tap_dance_state_t pointer and user_data as parameters.
+ * If the state count is 1, it sends the shortcut for "Shift + Alt + F" to format the entire file in VS Code, and resets the tap dance state.
+ * If the state count is any other value, it sends the shortcut for "Ctrl + K" followed by "Ctrl + F" to format the selected code in VS Code, and resets the tap dance state.
+ *
+ * @param state The tap_dance_state_t pointer.
+ * @param user_data A pointer to user-defined data (if any).
+ */
 void ct_vsc_fmt_win(tap_dance_state_t *state, void *user_data) {
+    // Check the count of the tap dance state
     if (state->count == 1) {
-        SEND_STRING(SS_RSFT(SS_LALT("f"))); // format in VS Code
+        // If count is 1, send the shortcut for "Shift + Alt + F" to format the entire file in VS Code
+        SEND_STRING(SS_RSFT(SS_LALT("f")));
+
+        // Reset the tap dance state
         reset_tap_dance(state);
     } else {
-        SEND_STRING(SS_LCTL("k") SS_LCTL("f")); // format selection in VS Code
+        // For any other count value, send the shortcut for "Ctrl + K" followed by "Ctrl + F" to format the selected code in VS Code
+        SEND_STRING(SS_LCTL("k") SS_LCTL("f"));
+
+        // Reset the tap dance state
+        reset_tap_dance(state);
+    }
+}
+
+/**
+ * This function is a Tap Dance action for VS Code commands.
+ * It takes a tap_dance_state_t pointer and user_data as parameters.
+ * If the state count is 1, it sends the shortcut for "Shift + Alt + Down Arrow" and resets the tap dance state.
+ * If the state count is 2, it sends the shortcut for "Shift + Ctrl + K" and resets the tap dance state.
+ * If the state count is any other value, it sends the shortcut for "Alt + Down Arrow" and resets the tap dance state.
+ *
+ * @param state The tap_dance_state_t pointer.
+ * @param user_data A pointer to user-defined data (if any).
+ */
+void ct_vsc_custom_mv(tap_dance_state_t *state, void *user_data) {
+    // Check the count of the tap dance state
+    if (state->count == 1) {
+        // If count is 1, send the shortcut for "Shift + Alt + Down Arrow"
+        SEND_STRING(SS_RSFT(SS_LALT(SS_TAP(X_DOWN))));
+
+        // Reset the tap dance state
+        reset_tap_dance(state);
+    } else if (state->count == 2) {
+        // If count is 2, send the shortcut for "Shift + Ctrl + K"
+        SEND_STRING(SS_RSFT(SS_LCTL(SS_TAP(X_K))));
+
+        // Reset the tap dance state
+        reset_tap_dance(state);
+    } else {
+        // For any other count value, send the shortcut for "Alt + Down Arrow"
+        SEND_STRING(SS_LALT(SS_TAP(X_DOWN)));
+
+        // Reset the tap dance state
         reset_tap_dance(state);
     }
 }
@@ -165,6 +223,7 @@ tap_dance_action_t tap_dance_actions[] = {
   [CT_CUT_WIN] = ACTION_TAP_DANCE_FN(ct_cut_win),
   [CT_DO_ACTIONS] = ACTION_TAP_DANCE_FN(ct_do_actions_win),
   [CT_VS_FMT_WIN] = ACTION_TAP_DANCE_FN(ct_vsc_fmt_win),
+  [CT_VS_CSTM_WIN] = ACTION_TAP_DANCE_FN(ct_vsc_custom_mv),
   [TD_CLOSE_TAB_WIN] = ACTION_TAP_DANCE_FN(ct_close_tab_win),
   [TD_VIRTUAL_DESK_WIN] = ACTION_TAP_DANCE_FN(ct_virtual_desktops_win),
   [TD_RESET] = ACTION_TAP_DANCE_FN(safe_reset)
@@ -198,8 +257,8 @@ const uint16_t PROGMEM keymaps[][MATRIX_ROWS][MATRIX_COLS] = {
     [_BASE] = LAYOUT(
                 TD(CT_COPY_WIN),        KC_PASTE_WIN,        TD(CT_CUT_WIN),    TD(CT_VS_FMT_WIN),          TO(_FN2),
                 KC_SAVE_WIN,            TD(CT_DO_ACTIONS),   KC_7,              KC_8,                       TO(_FN),
-                TD(TD_CLOSE_TAB_WIN),   KC_VDESK_L_WIN,      KC_VDESK_R_WIN,    TD(TD_VIRTUAL_DESK_WIN),    KC_MPLY,
-                MO(_FN2),               KC_LEFT,             KC_DOWN,           KC_RIGHT
+                TD(CT_VS_CSTM_WIN),     KC_VDESK_L_WIN,      KC_VDESK_R_WIN,    TD(TD_VIRTUAL_DESK_WIN),    KC_MPLY,
+                MO(_FN2),               TD(TD_CLOSE_TAB_WIN),             KC_DOWN,           KC_RIGHT
             ),
 
 /*
