@@ -130,3 +130,6 @@ via*.json
 /keyboards/**/keymaps/vial/*
 .vscode/settings.json
 keyboards/doio/kb16/.vscode/settings.json
+
+# SonarQube local config (contains access token)
+sonar-project.properties
